@@ -4,10 +4,19 @@ from datetime import datetime
 # general 
 pygame.init()
 font = pygame.font.Font(None, 50)
+font2 = pygame.font.Font(None, 30)
+start_screen = True
+game = False
+game_over = False
+score = 0
 
 # display screen set up
 screen = pygame.display.set_mode((800, 400))
 clock = pygame.time.Clock()
+
+# play screen
+play_surf = font.render("PLAY", False, "Grey")
+play_rect = play_surf.get_rect(center=(400,200))
 
 # spaceship class(sprite + movement + shooting)
 count = 0
@@ -35,9 +44,11 @@ class Spaceship(pygame.sprite.Sprite):
                     spaceship_group.add(bullet)
                     count = 30
         # collisions with enemy
+        global score
         for bullet in bullets_shot:
-            pygame.sprite.spritecollide(bullet, enemy_group, True)
-
+            collided = pygame.sprite.spritecollide(bullet, enemy_group, True)
+            for i in collided:
+                score += 1
 
 # bullet class(sprite + movement)
 class Bullet(pygame.sprite.Sprite):
@@ -57,11 +68,15 @@ class Enemy(pygame.sprite.Sprite):
         self.image.fill("red")
         self.rect = self.image.get_rect(center=(random.randint(20,780),0))
     def update(self):
+        global game_over
         self.rect.y += 2
-# (enemy spawining)
+        if self.rect.y > 380:
+            game_over = True
+# (enemy spawning)
 spawn_amount = random.randint(1,2)
 count2 = 0
 interval = random.randint(120,300)
+
 def enemy_spawning():
     global spawn_amount
     global count2
@@ -103,16 +118,50 @@ while True:
             pygame.quit()
             sys.exit()
 
-    # enemy spawning function
-    enemy_spawning()
+    # start_screen state
+    if start_screen:
+        screen.blit(play_surf, play_rect)
+        if play_rect.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed() != (False, False, False):
+            start_screen = False
+            game = True
 
-    # draw to screen
-    screen.fill("black")
-    spaceship_group.draw(screen)
-    enemy_group.draw(screen)
+    # game_running state
+    elif game:
 
-    # update the screen 60fps
-    spaceship_group.update()
-    enemy_group.update()
+        # if game over then end game
+        if game_over:
+            game = False
+
+        # enemy spawning function
+        enemy_spawning()
+
+        # draw to screen
+        screen.fill("black")
+        score_surf = font2.render("Score: " + str(score), False, "Grey")
+        score_rect = score_surf.get_rect(center=(400,50))
+        screen.blit(score_surf, score_rect)
+        spaceship_group.draw(screen)
+        enemy_group.draw(screen)
+
+        # update the screen 60fps
+        spaceship_group.update()
+        enemy_group.update()
+
+    # game_over state
+    elif game_over:
+        screen.fill("black")
+        score2_surf = font.render("Final Score: " + str(score), False, "Grey")
+        score2_rect = score2_surf.get_rect(center=(400,180))
+        screen.blit(score2_surf, score2_rect)
+        play_again_surf = font.render("play again", False, "Blue")
+        play_again_rect = play_again_surf.get_rect(center=(400,220))
+        screen.blit(play_again_surf, play_again_rect)
+        if play_again_rect.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed() != (False, False, False):
+            enemy_group.empty()
+            game_over = False
+            game = True
+            score = 0
+
+
     pygame.display.update()
     clock.tick(60)
